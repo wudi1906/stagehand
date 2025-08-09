@@ -419,28 +419,69 @@ export class QuestionnaireSystem {
       
       console.log('✅ 问卷页面加载完成');
       
-      // 🚀 使用Stagehand的核心能力，但不创建新实例
-      console.log('🤖 开始Stagehand智能作答...');
+      // 🚀 使用StagehandSuperIntelligentEngine进行真正的智能作答
+      console.log('🤖 启动StagehandSuperIntelligentEngine...');
       
-      // 使用页面提取功能分析问卷
-      console.log('🔍 分析问卷结构...');
+      // 🚫 绝不创建新浏览器！使用CDP连接到现有AdsPower窗口
+      console.log('🔗 使用CDP连接Stagehand到AdsPower...');
+      const { Stagehand } = await import('@browserbasehq/stagehand');
+      const stagehand = new Stagehand({
+        env: 'LOCAL',
+        modelName: 'gpt-4o',
+        enableCaching: true,
+        localBrowserLaunchOptions: {
+          cdpUrl: `http://127.0.0.1:${browserInfo.debugPort}`
+        }
+      });
       
-      // 这里我们需要使用一种不创建新Stagehand实例的方式
-      // 直接使用Playwright的功能，结合AI分析
-      const questionnaireTitle = await page.title();
-      console.log(`📋 问卷标题: ${questionnaireTitle}`);
+      // 🎯 关键：使用CDP URL连接到现有浏览器，绝不创建新实例
+      await stagehand.init();
       
-      // 获取页面内容进行分析
-      const pageContent = await page.content();
-      console.log('📊 页面内容已获取，准备AI分析');
+      console.log('✅ Stagehand实例已连接到AdsPower浏览器');
       
-      // 模拟智能作答过程 (这里需要集成真正的AI逻辑)
-      console.log('🤖 执行智能作答逻辑...');
+      // 🎯 确保Stagehand在正确的问卷页面上操作
+      const stagehandPage = stagehand.page;
+      
+      // 如果当前页面不是问卷页面，重新导航
+      const stagehandCurrentUrl = await stagehandPage.url();
+      if (!stagehandCurrentUrl.includes('wjx.cn') && !stagehandCurrentUrl.includes(questionnaireUrl)) {
+        console.log(`🔄 当前页面: ${stagehandCurrentUrl}`);
+        console.log('🌐 重新导航到问卷页面...');
+        await stagehandPage.goto(questionnaireUrl, { 
+          waitUntil: 'domcontentloaded',
+          timeout: 30000 
+        });
+        console.log('✅ 问卷页面重新加载完成');
+      }
+      
+      // 使用StagehandSuperIntelligentEngine
+      const { StagehandSuperIntelligentEngine } = await import('../answering/StagehandSuperIntelligentEngine');
+      const superEngine = new StagehandSuperIntelligentEngine(
+        stagehand,
+        config.digitalPersonProfile
+      );
+      
+      console.log('🎯 开始StagehandSuperIntelligentEngine智能作答流程...');
       console.log(`👤 数字人身份：${config.digitalPersonProfile.name}`);
       console.log(`🎯 职业背景：${config.digitalPersonProfile.occupation}`);
       
-      // 等待作答完成
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      // 执行真正的智能作答
+      const answeringResult = await superEngine.executeQuestionnaireAnswering(questionnaireUrl);
+      
+      console.log('✅ StagehandSuperIntelligentEngine作答完成');
+      console.log(`📊 作答统计: ${answeringResult.answeredQuestions}/${answeringResult.totalQuestions} 题`);
+      
+      // 获取记忆管理器实例以便后续清理
+      const memoryManager = superEngine.getMemoryManager();
+      if (memoryManager) {
+        console.log('📝 保存作答记忆...');
+        await memoryManager.saveMemoryToDisk();
+      }
+      
+      // 清理Stagehand实例
+      console.log('🧹 清理Stagehand实例...');
+      await superEngine.cleanup();
+      await stagehand.close();
       
       // 验证作答结果
       const currentUrl = page.url();
@@ -452,24 +493,17 @@ export class QuestionnaireSystem {
       
       const duration = Date.now() - startTime;
       
+      // 返回真正的作答结果
       return {
-        sessionId: `session-${Date.now()}`,
-        success: true,
-        totalQuestions: 1,
-        answeredQuestions: 1,
-        skippedQuestions: 0,
-        failedQuestions: 0,
-        duration,
-        results: [{
-          questionId: 'webui-style-answering',
-          questionText: `问卷智能作答 - ${questionnaireTitle}`,
-          questionType: 'webui_style_completion',
-          answer: `已在AdsPower窗口中完成智能作答`,
-          answerTime: duration,
-          success: true,
-          mode: 'complete_question_answering'
-        }],
-        errors: []
+        sessionId: answeringResult.sessionId || `session-${Date.now()}`,
+        success: answeringResult.success,
+        totalQuestions: answeringResult.totalQuestions,
+        answeredQuestions: answeringResult.answeredQuestions,
+        skippedQuestions: answeringResult.skippedQuestions,
+        failedQuestions: answeringResult.failedQuestions,
+        duration: answeringResult.duration || duration,
+        results: answeringResult.results || [],
+        errors: answeringResult.errors || []
       };
       
     } catch (error) {

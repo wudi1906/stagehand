@@ -131,8 +131,9 @@ export class DigitalPersonManager {
       
       console.log(`📋 测试请求参数:`, JSON.stringify(testQuery, null, 2));
       
+      // 🎯 优化：增加重试机制和更长的超时时间
       const response = await axios.post(`${this.xiaosheApiUrl}/api/smart-query/query`, testQuery, {
-        timeout: 10000,
+        timeout: 30000, // 增加到30秒，适应系统启动时的网络延迟
         headers: {
           'Content-Type': 'application/json'
         }
@@ -184,7 +185,7 @@ export class DigitalPersonManager {
       console.log(`🔍 查询小社会API: ${JSON.stringify(queryParams, null, 2)}`);
       
       const response = await axios.post(`${this.xiaosheApiUrl}/api/smart-query/query`, queryParams, {
-        timeout: 15000,
+        timeout: 30000, // 增加到30秒，与测试API保持一致
         headers: {
           'Content-Type': 'application/json'
         }
@@ -193,7 +194,7 @@ export class DigitalPersonManager {
       console.log(`📡 小社会API响应状态: ${response.status}`);
       
       if (response.status === 200 && response.data?.success) {
-        const digitalHumans = response.data.data || [];
+        const digitalHumans = response.data.results || [];
         
         console.log(`🌟 获取小社会数字人信息 (总数: ${digitalHumans.length}):`);
         
@@ -264,14 +265,14 @@ export class DigitalPersonManager {
       };
       
       const response = await axios.post(`${this.xiaosheApiUrl}/api/smart-query/query`, queryParams, {
-        timeout: 15000,
+        timeout: 30000, // 增加到30秒，确保稳定连接
         headers: {
           'Content-Type': 'application/json'
         }
       });
       
       if (response.status === 200 && response.data?.success) {
-        const digitalHumans = response.data.data || [];
+        const digitalHumans = response.data.results || [];
         
         if (digitalHumans.length > 0) {
           const human = digitalHumans[0];

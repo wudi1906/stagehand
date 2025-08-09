@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能查询系统 - 数字人社会模拟</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --dark-color: #1e293b;
+            --light-color: #f8fafc;
+            --border-color: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--dark-color);
+        }
+
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            margin: 20px;
+            padding: 0;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #3b82f6 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .nav-tabs {
+            background: var(--light-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .nav-tabs .nav-link {
+            color: var(--secondary-color);
+            border: none;
+            padding: 15px 25px;
+            font-weight: 500;
+        }
+
+        .nav-tabs .nav-link.active {
+            background: white;
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+        }
+
+        .tab-content {
+            padding: 30px;
+        }
+
+        .query-section {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+        }
+
+        .query-input {
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .query-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .btn-query {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-query:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .example-card {
+            background: var(--light-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .example-card:hover {
+            background: rgba(37, 99, 235, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .persona-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .badge-custom {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .api-endpoint {
+            background: var(--dark-color);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+
+        .config-section {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background: var(--success-color);
+        }
+
+        .status-offline {
+            background: var(--danger-color);
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--secondary-color);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1><i class="fas fa-search"></i> 智能查询系统</h1>
+            <div class="d-flex align-items-center">
+                <span class="status-indicator" id="systemStatus"></span>
+                <span id="systemStatusText">检查中...</span>
+            </div>
+        </div>
+
+        <!-- 导航标签 -->
+        <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="query-tab" data-bs-toggle="tab" data-bs-target="#query" type="button" role="tab">
+                    <i class="fas fa-search"></i> 智能查询
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="api-tab" data-bs-toggle="tab" data-bs-target="#api" type="button" role="tab">
+                    <i class="fas fa-code"></i> API文档
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="config-tab" data-bs-toggle="tab" data-bs-target="#config" type="button" role="tab">
+                    <i class="fas fa-cog"></i> 系统配置
+                </button>
+            </li>
+        </ul>
+
+        <!-- 标签内容 -->
+        <div class="tab-content" id="mainTabContent">
+            <!-- 智能查询标签 -->
+            <div class="tab-pane fade show active" id="query" role="tabpanel">
+                <!-- 查询输入区域 -->
+                <div class="query-section">
+                    <h4><i class="fas fa-magic"></i> 自然语言查询</h4>
+                    <p class="text-muted mb-3">使用自然语言描述您需要的数字人特征，系统将智能匹配符合条件的用户</p>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <textarea class="form-control query-input" id="queryInput" rows="3" 
+                                placeholder="例如：找一些25-35岁喜欢奢侈品的北京女性"></textarea>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button class="btn btn-query w-100" onclick="executeQuery()">
+                                <i class="fas fa-search"></i> 开始查询
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 查询示例 -->
+                <div class="query-section">
+                    <h5><i class="fas fa-lightbulb"></i> 查询示例</h5>
+                    <div id="queryExamples">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            加载示例中...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 查询结果 -->
+                <div class="query-section" id="queryResults" style="display: none;">
+                    <h5><i class="fas fa-users"></i> 查询结果</h5>
+                    <div id="resultsContainer"></div>
+                </div>
+            </div>
+
+            <!-- API文档标签 -->
+            <div class="tab-pane fade" id="api" role="tabpanel">
+                <div class="query-section">
+                    <h4><i class="fas fa-book"></i> API接口文档</h4>
+                    
+                    <!-- 智能查询接口 -->
+                    <div class="mb-4">
+                        <h5>1. 智能查询接口</h5>
+                        <div class="api-endpoint">
+                            POST /api/smart-query/query
+                        </div>
+                        <p><strong>功能：</strong>使用自然语言查询符合条件的数字人</p>
+                        <p><strong>请求体：</strong></p>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "query": "25-35岁喜欢奢侈品的北京女性"
+}</code></pre>
+                        <p><strong>响应示例：</strong></p>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "success": true,
+  "query": "25-35岁喜欢奢侈品的北京女性",
+  "parsed_query": {
+    "structured": {
+      "gender": "女",
+      "age_min": 25,
+      "age_max": 35,
+      "residence": "北京"
+    },
+    "semantic": "喜欢奢侈品 高端品牌"
+  },
+  "results": [...],
+  "count": 15
+}</code></pre>
+                    </div>
+
+                    <!-- 获取查询示例接口 -->
+                    <div class="mb-4">
+                        <h5>2. 获取查询示例</h5>
+                        <div class="api-endpoint">
+                            GET /api/smart-query/examples
+                        </div>
+                        <p><strong>功能：</strong>获取预设的查询示例</p>
+                        <p><strong>响应示例：</strong></p>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "success": true,
+  "examples": [
+    {
+      "title": "基础人口统计查询",
+      "examples": ["找一些25-35岁的女性", "需要北京的男性用户"]
+    }
+  ]
+}</code></pre>
+                    </div>
+
+                    <!-- 系统状态接口 -->
+                    <div class="mb-4">
+                        <h5>3. 系统状态接口</h5>
+                        <div class="api-endpoint">
+                            GET /api/smart-query/status
+                        </div>
+                        <p><strong>功能：</strong>获取智能查询系统的运行状态</p>
+                        <p><strong>响应示例：</strong></p>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "available": true,
+  "engine": {
+    "mysql_connected": true,
+    "lance_db_connected": true,
+    "deepseek_connected": true,
+    "vector_count": 29
+  },
+  "sync": {
+    "auto_sync_enabled": true,
+    "sync_interval_hours": 24,
+    "is_running": true
+  }
+}</code></pre>
+                    </div>
+
+                    <!-- 手动同步接口 -->
+                    <div class="mb-4">
+                        <h5>4. 手动同步接口</h5>
+                        <div class="api-endpoint">
+                            POST /api/smart-query/sync/manual
+                        </div>
+                        <p><strong>功能：</strong>手动触发数据同步</p>
+                        <p><strong>请求体：</strong></p>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "type": "full"  // "full" 或 "incremental"
+}</code></pre>
+                    </div>
+
+                    <!-- 同步配置接口 -->
+                    <div class="mb-4">
+                        <h5>5. 同步配置接口</h5>
+                        <div class="api-endpoint">
+                            GET /api/smart-query/sync/config<br>
+                            POST /api/smart-query/sync/config
+                        </div>
+                        <p><strong>功能：</strong>获取或更新数据同步配置</p>
+                        <p><strong>POST请求体：</strong></p>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "interval_hours": 24,
+  "auto_sync": true,
+  "sync_time": "02:00"
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 系统配置标签 -->
+            <div class="tab-pane fade" id="config" role="tabpanel">
+                <!-- 系统状态 -->
+                <div class="config-section">
+                    <h5><i class="fas fa-heartbeat"></i> 系统状态</h5>
+                    <div id="systemStatusDetails">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            加载状态中...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 数据同步配置 -->
+                <div class="config-section">
+                    <h5><i class="fas fa-sync"></i> 数据同步配置</h5>
+                    <div id="syncConfigSection">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            加载配置中...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 手动操作 -->
+                <div class="config-section">
+                    <h5><i class="fas fa-tools"></i> 手动操作</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button class="btn btn-primary w-100 mb-2" onclick="manualSync('full')">
+                                <i class="fas fa-database"></i> 全量同步
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-secondary w-100 mb-2" onclick="manualSync('incremental')">
+                                <i class="fas fa-sync-alt"></i> 增量同步
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 数字人详情模态框 -->
+    <div class="modal fade" id="personaDetailModal" tabindex="-1" aria-labelledby="personaDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="personaDetailModalLabel">
+                        <i class="fas fa-user"></i> 数字人详情
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="personaDetailContent">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            加载详情中...
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/smart_query.js"></script>
+</body>
+</html> 
