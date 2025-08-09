@@ -11,8 +11,14 @@ export { DigitalPersonManager } from './digital-person/DigitalPersonManager';
 export { QinguoProxyManager } from './proxy/QinguoProxyManager';
 export { AdsPowerManager } from './browser/AdsPowerManager';
 export { IntelligentAnswering } from './answering/IntelligentAnswering';
+export { StagehandSuperIntelligentEngine } from './answering/StagehandSuperIntelligentEngine';
+export { ContinuousAnsweringEnhancer } from './answering/ContinuousAnsweringEnhancer';
 export { MemoryManager } from './memory/MemoryManager';
+export { DigitalPersonMemoryManager } from './memory/DigitalPersonMemoryManager';
+export { IntelligentCompletionManager } from './completion/IntelligentCompletionManager';
 export { LifecycleManager } from './lifecycle/LifecycleManager';
+export { WindowMonitoringSystem } from './lifecycle/WindowMonitoringSystem';
+export { UnifiedResourceCleanupManager } from './lifecycle/UnifiedResourceCleanupManager';
 export { WebInterface } from './web/WebInterface';
 
 // 类型定义
@@ -33,8 +39,14 @@ console.log(`
 ║    ✅ QinguoProxyManager - 青果代理                         ║
 ║    ✅ AdsPowerManager - 浏览器管理                          ║
 ║    ✅ IntelligentAnswering - 智能作答                       ║
+║    🚀 StagehandSuperEngine - 超级智能引擎                 ║
+║    🔄 ContinuousAnsweringEnhancer - 持续作答增强器        ║
 ║    ✅ MemoryManager - 记忆管理                              ║
+║    🧠 DigitalPersonMemoryManager - 数字人记忆管理器       ║
+║    🎯 IntelligentCompletionManager - 智能完成检测管理器   ║
 ║    ✅ LifecycleManager - 生命周期                           ║
+║    🛡️ WindowMonitoringSystem - 窗口监控                   ║
+║    🧹 UnifiedResourceCleanupManager - 资源清理             ║
 ║    ✅ WebInterface - Web界面                                ║
 ╚══════════════════════════════════════════════════════════════╝
 `);

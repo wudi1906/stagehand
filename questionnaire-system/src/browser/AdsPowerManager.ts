@@ -120,9 +120,12 @@ export class AdsPowerManager {
       const response = await axios.get(`${this.baseUrl}/browser/list`);
       const browsers = response.data?.data || [];
       
-      // 查找可能是之前创建但未清理的浏览器
+      // 查找可能是之前创建但未清理的浏览器 (修复浏览器名称匹配)
       const questionnaireBrowsers = browsers.filter((browser: any) => 
-        browser.name && browser.name.includes('StagehandQuestionnaire')
+        browser.name && (
+          browser.name.includes('questionnaire-') || 
+          browser.name.includes('StagehandQuestionnaire')
+        )
       );
       
       if (questionnaireBrowsers.length > 0) {
@@ -130,13 +133,21 @@ export class AdsPowerManager {
         
         for (const browser of questionnaireBrowsers) {
           try {
+            // 先尝试停止，如果404说明已经不存在了
             await this.stopBrowser(browser.user_id);
             await this.deleteBrowserProfile(browser.user_id);
             console.log(`🗑️ 清理遗留浏览器: ${browser.name}`);
           } catch (error) {
-            console.warn(`⚠️ 清理浏览器 ${browser.user_id} 失败:`, error instanceof Error ? error.message : String(error));
+            // 404错误是正常的，说明浏览器已经不存在
+            if (error instanceof Error && error.message.includes('404')) {
+              console.log(`💡 浏览器 ${browser.user_id} 已不存在，无需清理`);
+            } else {
+              console.warn(`⚠️ 清理浏览器 ${browser.user_id} 失败:`, error instanceof Error ? error.message : String(error));
+            }
           }
         }
+      } else {
+        console.log(`✅ 未发现需要清理的遗留浏览器`);
       }
       
     } catch (error) {
@@ -331,26 +342,34 @@ export class AdsPowerManager {
       serial_number: this.serialNumber, // 关键：API认证参数在body中
       open_urls: [], // 不自动打开URL
       
-      // 🔧 强制桌面端fingerprint_config，参照AdsPower文档
+      // 🔧 完全对标web-ui成功的桌面端fingerprint_config
       fingerprint_config: {
         browser_kernel_config: {
-          type: 'chrome',
-          version: '138'  // 使用最新的Chrome 138 SunBrowser内核
+          version: 'ua_auto',  // web-ui使用ua_auto智能匹配最新Chrome内核
+          type: 'chrome'       // 强制桌面端，不使用移动端
         },
-        // 🔧 强制桌面端设备特征
-        automatic_timezone: true,
-        language: ['zh-CN', 'zh', 'en-US', 'en'],
-        screen_resolution: '800_600',  // 强制800x600桌面分辨率
-        device_type: 'pc',  // 明确指定PC桌面端
-        // 🔧 关键：强制桌面端User-Agent
-        user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
-        // 🔧 关键：强制PC平台
-        platform: 'Win32',
-        hardware_concurrency: 4,
-        device_memory: 8,
-        // 🔧 禁用移动端特征
-        touch_support: false,
-        mobile: false
+        screen_resolution: '800_600',  // 使用较小的桌面端分辨率
+        automatic_timezone: '1',       // web-ui使用字符串'1'
+        language: ['zh-CN', 'zh', 'en-US', 'en'],  // 中文桌面端语言
+        // 🔧 关键修复：强制桌面端设备配置 (完全对标web-ui)
+        device_name_switch: '1',  // 掩盖设备名称
+        platform: 'Win32',       // 强制Windows平台
+        device_scale: '1',        // 桌面端缩放比例
+        mobile: '0',              // 强制非移动端 (web-ui使用字符串)
+        touch: '0',               // 强制无触摸 (web-ui使用字符串)
+        // 🔧 关键修复：强制指定桌面端User-Agent，覆盖ua_auto可能的移动端UA
+        ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+        fonts: ['system'],
+        canvas: 1,  // 使用数值而不是字符串 (对标web-ui)
+        webgl: 1,   // 使用数值而不是字符串
+        audio: 1,   // 使用数值而不是字符串
+        location: 'ask',
+        webrtc: 'disabled',
+        do_not_track: 'default',
+        hardware_concurrency: '4',  // web-ui使用字符串
+        device_memory: '8',         // web-ui使用字符串
+        flash: 'block'
+        // 🔧 强制桌面端配置，禁用任何移动端特征
       }
     };
 
@@ -392,8 +411,12 @@ export class AdsPowerManager {
       console.log(`📋 配置详情:`);
       console.log(`   - 内核: Chrome ${config.fingerprint_config.browser_kernel_config.version}`);
       console.log(`   - 分辨率: ${config.fingerprint_config.screen_resolution}`);
-      console.log(`   - 设备类型: ${config.fingerprint_config.device_type}`);
+      console.log(`   - 平台: ${config.fingerprint_config.platform}`);
+      console.log(`   - 移动端: ${config.fingerprint_config.mobile} (应该是'0')`);
+      console.log(`   - 触摸: ${config.fingerprint_config.touch} (应该是'0')`);
+      console.log(`   - User-Agent: ${config.fingerprint_config.ua.substring(0, 50)}...`);
       console.log(`   - 代理: ${proxyInfo ? '已配置' : '未配置'}`);
+      console.log(`✅ 强制桌面端配置已应用 (完全对标web-ui成功配置)`);
       
       // 参照web-ui：使用/user/create端点
       const response = await axios.post(`${this.baseUrl}/user/create`, config, {

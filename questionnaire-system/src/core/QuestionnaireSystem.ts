@@ -10,13 +10,17 @@ import { DigitalPersonManager } from '../digital-person/DigitalPersonManager';
 import { QinguoProxyManager } from '../proxy/QinguoProxyManager';
 import { AdsPowerManager } from '../browser/AdsPowerManager';
 import { IntelligentAnswering } from '../answering/IntelligentAnswering';
+import { StagehandSuperIntelligentEngine } from '../answering/StagehandSuperIntelligentEngine';
 import { MemoryManager } from '../memory/MemoryManager';
 import { LifecycleManager } from '../lifecycle/LifecycleManager';
+import { WindowMonitoringSystem } from '../lifecycle/WindowMonitoringSystem';
+import { SessionResourceData } from '../lifecycle/UnifiedResourceCleanupManager';
 import { 
   QuestionnaireConfig, 
   AnsweringResult, 
   SessionStatusResponse,
-  AnsweringConfig
+  AnsweringConfig,
+  DigitalPersonProfile
 } from '../types';
 
 // 会话类定义
@@ -59,8 +63,10 @@ export class QuestionnaireSystem {
   private answeringEngine: IntelligentAnswering;
   private memoryManager: MemoryManager;
   private lifecycleManager: LifecycleManager;
+  private windowMonitoringSystem: WindowMonitoringSystem;
   
   private activeSessions: Map<string, QuestionnaireSession> = new Map();
+  private sessionResourceData: Map<string, SessionResourceData> = new Map();
   private isInitialized: boolean = false;
 
   constructor() {
@@ -70,6 +76,7 @@ export class QuestionnaireSystem {
     this.browserManager = new AdsPowerManager();
     this.memoryManager = new MemoryManager();
     this.lifecycleManager = new LifecycleManager();
+    this.windowMonitoringSystem = new WindowMonitoringSystem(this.browserManager);
 
     // 创建Stagehand实例
     this.stagehand = new Stagehand({
@@ -172,11 +179,26 @@ export class QuestionnaireSystem {
     try {
       console.log(`🔄 开始执行作答流程: ${sessionId}`);
       
-      // 1. 获取数字人档案
+      // 1. 获取数字人档案 - 优先使用小社会API智能匹配
       console.log('👤 获取数字人档案...');
-      const digitalPersonProfile = await this.digitalPersonManager.getProfile(
-        config.digitalPersonId || 'default'
-      );
+      let digitalPersonProfile: DigitalPersonProfile;
+      
+      // 先尝试小社会API智能匹配
+      if (!config.digitalPersonId || config.digitalPersonId === 'default') {
+        console.log('🎯 尝试小社会API智能匹配数字人...');
+        const smartProfile = await this.digitalPersonManager.queryDigitalPersonForQuestionnaire(config.url);
+        
+        if (smartProfile) {
+          digitalPersonProfile = smartProfile;
+          console.log(`✨ 小社会API智能匹配成功: ${digitalPersonProfile.name}`);
+        } else {
+          console.log('📋 小社会API匹配失败，使用默认档案');
+          digitalPersonProfile = await this.digitalPersonManager.getProfile('default');
+        }
+      } else {
+        // 使用指定的数字人档案
+        digitalPersonProfile = await this.digitalPersonManager.getProfile(config.digitalPersonId);
+      }
 
       // 2. 分配代理
       console.log('🌐 分配青果代理...');
@@ -215,6 +237,26 @@ export class QuestionnaireSystem {
         proxyInfo,
         browserInfo
       };
+
+      // 🛡️ 启动窗口监控系统 - 完全对标web-ui的监控机制
+      console.log('🛡️ 启动窗口监控系统...');
+      const sessionResourceData: SessionResourceData = {
+        sessionId,
+        profileId: browserInfo.profileId,
+        proxyInfo,
+        stagehand: this.stagehand,
+        browserInfo,
+        adsPowerManager: this.browserManager,
+        proxyManager: this.proxyManager,
+        memoryManager: this.memoryManager
+      };
+      
+      // 存储会话资源数据
+      this.sessionResourceData.set(sessionId, sessionResourceData);
+      
+      // 启动监控
+      this.windowMonitoringSystem.startMonitoring(sessionId, sessionResourceData);
+      console.log('✅ 窗口监控已启动，将自动检测浏览器关闭事件');
 
       // 🚀 启动真正的Stagehand智能作答流程 (完全模仿web-ui模式)
       console.log('🧠 启动Stagehand连接AdsPower - 完全模仿web-ui成功模式');
@@ -798,43 +840,25 @@ export class QuestionnaireSystem {
       
       console.log('✅ 问卷页面加载完成');
       
-      // 🤖 创建Stagehand Agent进行智能作答
-      console.log('🤖 创建Stagehand Agent进行智能作答...');
-      const agent = this.stagehand.agent({
-        provider: 'openai',
-        model: 'gpt-4o',
-        instructions: `你是一个专业的问卷作答助手。请仔细分析并完成这个问卷。
-
-个人身份信息：
-- 姓名：${config.digitalPersonProfile.name}
-- 年龄：${config.digitalPersonProfile.age}岁
-- 职业：${config.digitalPersonProfile.occupation}
-- 教育背景：${config.digitalPersonProfile.education}
-
-核心任务：
-1. 仔细分析整个问卷的结构和所有题目
-2. 基于个人背景给出真实、合理、一致的答案
-3. 确保所有必填项都被正确填写
-4. 对于选择题，选择最符合人物设定的选项
-5. 对于开放题，给出详细但合理的回答
-6. 完成所有题目后提交问卷
-
-请逐步执行，确保高质量完成。`
+      // 🚀 启动Stagehand超级智能引擎 - 完全替代Browser-Use
+      console.log('🚀 启动Stagehand超级智能作答引擎...');
+      console.log('🎯 融合web-ui智慧，发挥Stagehand最大性能');
+      
+      const superEngine = new StagehandSuperIntelligentEngine(
+        this.stagehand,
+        config.digitalPersonProfile
+      );
+      
+      // 执行超级智能作答
+      const agentResult = await superEngine.executeQuestionnaireAnswering(questionnaireUrl);
+      
+      console.log('✅ Stagehand超级智能作答完成');
+      console.log('📊 作答结果:', {
+        success: agentResult.success,
+        totalQuestions: agentResult.totalQuestions,
+        answeredQuestions: agentResult.answeredQuestions,
+        duration: `${Math.round(agentResult.duration / 1000)}秒`
       });
-      
-      // 🚀 执行智能作答
-      console.log('🚀 执行Stagehand Agent智能作答...');
-      const agentResult = await agent.execute(`请仔细分析这个问卷，以${config.digitalPersonProfile.name}的身份完成所有题目：
-
-1. 首先浏览整个问卷，了解所有题目
-2. 逐个回答每个问题，确保答案符合人物背景
-3. 检查所有必填项是否已填写
-4. 最后提交问卷
-
-请确保每个步骤都仔细执行，给出高质量的回答。`);
-      
-      console.log('✅ Stagehand Agent作答完成');
-      console.log('📊 Agent执行摘要:', agentResult.message);
       
       // 验证作答结果
       console.log('🔍 验证作答结果...');
@@ -850,49 +874,38 @@ export class QuestionnaireSystem {
       
       console.log('🔍 最终状态检查:', finalStatus);
       
-      // 处理Agent执行结果
+      // 处理超级引擎执行结果
       const results: any[] = [];
-      if (agentResult.actions && agentResult.actions.length > 0) {
-        agentResult.actions.forEach((action: any, index: number) => {
-          results.push({
-            questionId: `step-${index + 1}`,
-            questionText: action.description || `执行步骤 ${index + 1}`,
-            questionType: 'agent_action',
-            answer: action.action || 'completed',
-            answerTime: Date.now() - startTime,
-            success: true,
-            mode: 'complete_question_answering'
-          });
-        });
-      } else {
-        results.push({
-          questionId: 'questionnaire-complete',
-          questionText: '完整问卷智能作答',
-          questionType: 'agent_completion',
-          answer: agentResult.message,
-          answerTime: Date.now() - startTime,
-          success: finalStatus.submitted,
-          mode: 'complete_question_answering'
-        });
-      }
       
-      const duration = Date.now() - startTime;
-      const successfulAnswers = results.filter(r => r.success).length;
-      const failedAnswers = results.filter(r => !r.success).length;
+      // 基于超级引擎的结果创建兼容的结果格式
+      results.push({
+        questionId: 'stagehand-super-engine',
+        questionText: 'Stagehand超级智能作答引擎',
+        questionType: 'super_intelligent_answering',
+        answer: `完成${agentResult.answeredQuestions}个题目`,
+        answerTime: agentResult.duration,
+        success: agentResult.success,
+        mode: 'stagehand_super_intelligent'
+      });
+      
+      const duration = agentResult.duration;
+      const successfulAnswers = agentResult.answeredQuestions;
+      const failedAnswers = agentResult.failedQuestions;
 
       // 🧹 清理连接（不关闭AdsPower浏览器）
       await browser.close();
       
+      // 直接返回超级引擎的完整结果
       return {
-        sessionId: `session-${Date.now()}`,
-        success: finalStatus.submitted || successfulAnswers > 0,
-        totalQuestions: finalStatus.completedQuestions || results.length,
-        answeredQuestions: finalStatus.completedQuestions || successfulAnswers,
-        skippedQuestions: 0,
-        failedQuestions: failedAnswers,
-        duration,
+        sessionId: agentResult.sessionId,
+        success: agentResult.success,
+        totalQuestions: agentResult.totalQuestions,
+        answeredQuestions: agentResult.answeredQuestions,
+        skippedQuestions: agentResult.skippedQuestions,
+        failedQuestions: agentResult.failedQuestions,
+        duration: agentResult.duration,
         results,
-        errors: finalStatus.errorMessage ? [finalStatus.errorMessage] : []
+        errors: agentResult.errors
       };
       
     } catch (error) {
@@ -997,19 +1010,38 @@ export class QuestionnaireSystem {
   }
 
   /**
-   * 清理会话资源
+   * 清理会话资源 - 集成窗口监控系统的全面清理
    */
   private async cleanupSession(sessionId: string): Promise<void> {
     try {
       console.log(`🧹 清理会话资源: ${sessionId}`);
 
+      // 1. 停止窗口监控
+      console.log(`🛑 停止窗口监控: ${sessionId}`);
+      this.windowMonitoringSystem.stopMonitoring(sessionId, "会话结束");
+
+      // 2. 获取会话资源数据并执行全面清理
+      const sessionResourceData = this.sessionResourceData.get(sessionId);
+      if (sessionResourceData) {
+        console.log(`🧹 执行统一资源清理: ${sessionId}`);
+        // 注意：这里不需要再次调用全面清理，因为已经在监控系统中处理了
+        // 只需要清理本地引用即可
+        this.sessionResourceData.delete(sessionId);
+      }
+
+      // 3. 传统清理流程（作为备用）
+      console.log(`🔄 执行传统清理流程: ${sessionId}`);
+      
       // 释放代理
       this.proxyManager.releaseProxy(sessionId);
 
       // 停止并删除浏览器
       await this.browserManager.cleanupBrowser(sessionId);
 
-      // 记录清理事件
+      // 4. 从活动会话中移除
+      this.activeSessions.delete(sessionId);
+
+      // 5. 记录清理事件
       await this.lifecycleManager.recordEvent(sessionId, {
         type: 'cleaned'
       });
@@ -1018,6 +1050,15 @@ export class QuestionnaireSystem {
 
     } catch (error) {
       console.error(`❌ 清理会话资源失败 (${sessionId}):`, error);
+      
+      // 即使清理失败，也要尝试停止监控
+      try {
+        this.windowMonitoringSystem.stopMonitoring(sessionId, "清理失败时强制停止");
+        this.sessionResourceData.delete(sessionId);
+        this.activeSessions.delete(sessionId);
+      } catch (e) {
+        console.error(`❌ 强制清理也失败: ${e}`);
+      }
     }
   }
 

@@ -117,57 +117,197 @@ export class DigitalPersonManager {
   }
 
   /**
-   * 测试小社会API连接
+   * 测试小社会API连接 - 完全对标web-ui实现
    */
   private async testXiaosheAPI(): Promise<void> {
     try {
-      const response = await axios.get(`${this.xiaosheApiUrl}/api/health`, {
-        timeout: 5000
+      console.log(`🔍 测试小社会API连接: ${this.xiaosheApiUrl}/api/smart-query/query`);
+      
+      // 使用web-ui相同的smart-query接口进行测试
+      const testQuery = {
+        query: '测试连接',
+        limit: 1
+      };
+      
+      console.log(`📋 测试请求参数:`, JSON.stringify(testQuery, null, 2));
+      
+      const response = await axios.post(`${this.xiaosheApiUrl}/api/smart-query/query`, testQuery, {
+        timeout: 10000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
+      
+      console.log(`📡 小社会API响应状态码: ${response.status}`);
+      console.log(`📋 响应数据结构:`, JSON.stringify(response.data, null, 2));
       
       if (response.status === 200) {
         console.log('✅ 小社会API连接测试成功');
+        console.log(`📋 API地址: ${this.xiaosheApiUrl}/api/smart-query/query`);
+        
+        // 验证响应格式
+        if (response.data?.success) {
+          console.log(`✅ 小社会API响应格式验证成功`);
+        } else {
+          console.warn(`⚠️ 小社会API响应格式异常，但连接正常`);
+        }
       } else {
         throw new Error(`API返回状态码: ${response.status}`);
       }
     } catch (error) {
+      console.error(`❌ 小社会API连接详细错误信息:`);
+      console.error(`   🔗 API地址: ${this.xiaosheApiUrl}/api/smart-query/query`);
+      console.error(`   📋 错误类型: ${error instanceof Error ? error.constructor.name : typeof error}`);
+      console.error(`   💬 错误消息: ${error instanceof Error ? error.message : String(error)}`);
+      
+      if (axios.isAxiosError(error)) {
+        console.error(`   📡 HTTP状态: ${error.response?.status || '无响应'}`);
+        console.error(`   🔗 请求URL: ${error.config?.url || '未知'}`);
+        console.error(`   ⏱️ 超时设置: ${error.config?.timeout || '未设置'}ms`);
+      }
+      
       throw new Error(`小社会API连接失败: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   /**
-   * 从API加载档案
+   * 从API加载档案 - 使用smart-query接口
    */
   private async loadProfilesFromAPI(): Promise<void> {
     try {
-      const response = await axios.get(`${this.xiaosheApiUrl}/api/digital-persons`, {
-        timeout: 10000
+      // 使用web-ui相同的smart-query接口查询多个数字人
+      const queryParams = {
+        query: '获取多种类型的数字人档案，包括学生、白领、退休人员等',
+        limit: 5
+      };
+      
+      console.log(`🔍 查询小社会API: ${JSON.stringify(queryParams, null, 2)}`);
+      
+      const response = await axios.post(`${this.xiaosheApiUrl}/api/smart-query/query`, queryParams, {
+        timeout: 15000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
       
-      if (response.data && Array.isArray(response.data)) {
-        response.data.forEach((apiProfile: any) => {
+      console.log(`📡 小社会API响应状态: ${response.status}`);
+      
+      if (response.status === 200 && response.data?.success) {
+        const digitalHumans = response.data.data || [];
+        
+        console.log(`🌟 获取小社会数字人信息 (总数: ${digitalHumans.length}):`);
+        
+        digitalHumans.forEach((human: any, index: number) => {
+          // 完全对标web-ui的小社会API数据格式
           const profile: DigitalPersonProfile = {
-            id: apiProfile.id || `api_${Date.now()}`,
-            name: apiProfile.name || '未知',
-            age: apiProfile.age || 25,
-            gender: apiProfile.gender || '未知',
-            education: apiProfile.education || '本科',
-            occupation: apiProfile.occupation || '职员',
-            location: apiProfile.location || '北京',
-            interests: apiProfile.interests || ['生活'],
-            personality: apiProfile.personality || '友善开朗',
-            background: apiProfile.background,
-            preferences: apiProfile.preferences
+            id: human.id || `xiaoshe_${Date.now()}_${index}`,
+            name: human.name || human.姓名 || '未知',
+            age: typeof human.age === 'string' ? parseInt(human.age) : (human.age || human.年龄 || 25),
+            gender: human.gender || human.性别 || '未知',
+            education: human.education || human.学历 || '本科',
+            occupation: human.profession || human.occupation || human.职业 || '职员',
+            location: human.location || human.地区 || '北京',
+            interests: human.interests || human.兴趣爱好 || ['生活'],
+            personality: human.personality || human.性格特点 || human.性格 || '友善开朗',
+            background: human.background || human.背景信息 || `${human.profession || '职员'}，收入${human.income || '未知'}，${human.marital_status || ''}，${human.family_status || ''}`,
+            preferences: {
+              consumption_habits: human.consumption_habits || human.消费习惯,
+              favorite_brands: human.favorite_brands || human.喜爱品牌 || [],
+              medical_history: human.medical_history || human.病史,
+              income: human.income || human.收入,
+              marital_status: human.marital_status || human.婚姻状态
+            }
           };
           
           this.profiles.set(profile.id, profile);
+          console.log(`👤 加载小社会数字人 ${index + 1}: ${profile.name} (${profile.age}岁, ${profile.occupation})`);
+          console.log(`   📍 位置: ${profile.location}, 教育: ${profile.education}`);
+          console.log(`   💡 性格: ${profile.personality}`);
+          if (profile.preferences?.income) {
+            console.log(`   💰 收入: ${profile.preferences.income}`);
+          }
         });
         
-        console.log(`📥 从API加载了 ${response.data.length} 个额外档案`);
+        console.log(`📥 从小社会API加载了 ${digitalHumans.length} 个额外档案`);
+      } else {
+        console.warn(`⚠️ 小社会API响应异常: ${response.data?.error || '未知错误'}`);
       }
       
     } catch (error) {
-      console.warn('⚠️ 从API加载档案失败:', error instanceof Error ? error.message : String(error));
+      console.warn('⚠️ 从小社会API加载档案失败:', error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /**
+   * 智能查询小社会数字人 - 根据问卷需求获取最适合的数字人
+   */
+  async queryDigitalPersonForQuestionnaire(questionnaireUrl: string): Promise<DigitalPersonProfile | null> {
+    try {
+      // 根据问卷URL分析目标群体
+      let queryText = '获取1个通用数字人档案';
+      
+      if (questionnaireUrl.includes('student') || questionnaireUrl.includes('学生') || questionnaireUrl.includes('大学')) {
+        queryText = '获取1个大学生数字人档案，年龄20-25岁';
+      } else if (questionnaireUrl.includes('shopping') || questionnaireUrl.includes('购物') || questionnaireUrl.includes('消费')) {
+        queryText = '获取1个有购物经验的成年数字人档案，25-40岁';
+      } else if (questionnaireUrl.includes('health') || questionnaireUrl.includes('健康') || questionnaireUrl.includes('医疗')) {
+        queryText = '获取1个关注健康的成年数字人档案，30-50岁';
+      } else if (questionnaireUrl.includes('work') || questionnaireUrl.includes('工作') || questionnaireUrl.includes('职场')) {
+        queryText = '获取1个有工作经验的职场数字人档案，25-45岁';
+      }
+      
+      console.log(`🎯 为问卷智能匹配数字人: ${queryText}`);
+      
+      const queryParams = {
+        query: queryText,
+        limit: 1
+      };
+      
+      const response = await axios.post(`${this.xiaosheApiUrl}/api/smart-query/query`, queryParams, {
+        timeout: 15000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.status === 200 && response.data?.success) {
+        const digitalHumans = response.data.data || [];
+        
+        if (digitalHumans.length > 0) {
+          const human = digitalHumans[0];
+          const profile: DigitalPersonProfile = {
+            id: human.id || `xiaoshe_smart_${Date.now()}`,
+            name: human.name || human.姓名 || '智能匹配用户',
+            age: typeof human.age === 'string' ? parseInt(human.age) : (human.age || human.年龄 || 25),
+            gender: human.gender || human.性别 || '未知',
+            education: human.education || human.学历 || '本科',
+            occupation: human.profession || human.occupation || human.职业 || '职员',
+            location: human.location || human.地区 || '北京',
+            interests: human.interests || human.兴趣爱好 || ['生活'],
+            personality: human.personality || human.性格特点 || human.性格 || '友善开朗',
+            background: human.background || human.背景信息 || `${human.profession || '职员'}，收入${human.income || '未知'}`,
+            preferences: {
+              consumption_habits: human.consumption_habits || human.消费习惯,
+              favorite_brands: human.favorite_brands || human.喜爱品牌 || [],
+              medical_history: human.medical_history || human.病史,
+              income: human.income || human.收入,
+              marital_status: human.marital_status || human.婚姻状态
+            }
+          };
+          
+          console.log(`🌟 小社会API智能匹配成功: ${profile.name} (${profile.age}岁, ${profile.occupation})`);
+          console.log(`   📍 特征: ${profile.location}, ${profile.education}, ${profile.personality}`);
+          
+          return profile;
+        }
+      }
+      
+      console.warn(`⚠️ 小社会API智能匹配失败，使用备用档案`);
+      return null;
+      
+    } catch (error) {
+      console.warn(`⚠️ 小社会API智能查询失败:`, error instanceof Error ? error.message : String(error));
+      return null;
     }
   }
 
