@@ -93,12 +93,293 @@ export class DigitalPersonManager {
   }
 
   /**
-   * 初始化管理器
+   * 加载小社会系统备用方案数字人 - 包含完整的小社会数据结构
+   */
+  private loadXiaosheFallbackProfiles(): void {
+    console.log('🔄 加载小社会系统备用方案数字人...');
+    
+    // 完整的小社会数据结构模拟 - 基于实际的小社会系统返回格式
+    const xiaosheFallbackProfiles = [
+      {
+        // 学生群体
+        id: 'xiaoshe_fallback_student_001',
+        name: '张伟',
+        age: 22,
+        gender: '男',
+        education: '本科',
+        profession: '软件工程师',
+        occupation: '软件工程师',
+        location: '北京',
+        地区: '北京',
+        interests: ['编程', '游戏', '电影', '音乐'],
+        兴趣爱好: ['编程', '游戏', '电影', '音乐'],
+        personality: '友善开朗',
+        性格特点: '友善开朗',
+        性格: '友善开朗',
+        background: '软件工程师，收入8000-12000，单身，与父母同住',
+        背景信息: '软件工程师，收入8000-12000，单身，与父母同住',
+        consumption_habits: '理性消费，关注性价比',
+        消费习惯: '理性消费，关注性价比',
+        favorite_brands: ['小米', '华为', '网易', '腾讯'],
+        喜爱品牌: ['小米', '华为', '网易', '腾讯'],
+        medical_history: '无重大疾病史',
+        病史: '无重大疾病史',
+        income: '8000-12000',
+        收入: '8000-12000',
+        marital_status: '单身',
+        婚姻状态: '单身',
+        family_status: '与父母同住',
+        relationships: [
+          {
+            human_name_1: '张伟',
+            human_name_2: '李明',
+            relationship_type: '同事',
+            relationship_strength: 0.8,
+            start_date: '2023-01-15',
+            end_date: null,
+            created_at: '2024-01-01',
+            updated_at: '2024-08-10'
+          }
+        ],
+        residence: '北京市海淀区',
+        residence_city: '海淀区',
+        residence_province: '北京市',
+        residence_country: '中国'
+      },
+      {
+        // 职场白领群体
+        id: 'xiaoshe_fallback_worker_002',
+        name: '王强',
+        age: 30,
+        gender: '男',
+        education: '本科',
+        profession: '软件工程师',
+        occupation: '软件工程师',
+        location: '北京',
+        地区: '北京',
+        interests: ['技术', '阅读', '健身', '旅行'],
+        兴趣爱好: ['技术', '阅读', '健身', '旅行'],
+        personality: '友善开朗',
+        性格特点: '友善开朗',
+        性格: '友善开朗',
+        background: '软件工程师，收入12000-18000，已婚，两人世界',
+        背景信息: '软件工程师，收入12000-18000，已婚，两人世界',
+        consumption_habits: '品质消费，追求生活品质',
+        消费习惯: '品质消费，追求生活品质',
+        favorite_brands: ['苹果', '特斯拉', '星巴克', '耐克'],
+        喜爱品牌: ['苹果', '特斯拉', '星巴克', '耐克'],
+        medical_history: '无重大疾病史',
+        病史: '无重大疾病史',
+        income: '12000-18000',
+        收入: '12000-18000',
+        marital_status: '已婚',
+        婚姻状态: '已婚',
+        family_status: '两人世界',
+        relationships: [
+          {
+            human_name_1: '王强',
+            human_name_2: '张伟',
+            relationship_type: '同事',
+            relationship_strength: 0.8,
+            start_date: '2023-01-15',
+            end_date: null,
+            created_at: '2024-01-01',
+            updated_at: '2024-08-10'
+          }
+        ],
+        residence: '北京市朝阳区',
+        residence_city: '朝阳区',
+        residence_province: '北京市',
+        residence_country: '中国'
+      },
+      {
+        // 管理层群体
+        id: 'xiaoshe_fallback_manager_003',
+        name: '李明智',
+        age: 35,
+        gender: '男',
+        education: '本科',
+        profession: '产品经理',
+        occupation: '产品经理',
+        location: '北京',
+        地区: '北京',
+        interests: ['管理', '商业', '投资', '运动'],
+        兴趣爱好: ['管理', '商业', '投资', '运动'],
+        personality: '友善开朗',
+        性格特点: '友善开朗',
+        性格: '友善开朗',
+        background: '产品经理，收入20000-30000，已婚，有孩子',
+        背景信息: '产品经理，收入20000-30000，已婚，有孩子',
+        consumption_habits: '高端消费，注重品牌和品质',
+        消费习惯: '高端消费，注重品牌和品质',
+        favorite_brands: ['奔驰', '苹果', '路易威登', '星巴克'],
+        喜爱品牌: ['奔驰', '苹果', '路易威登', '星巴克'],
+        medical_history: '无重大疾病史',
+        病史: '无重大疾病史',
+        income: '20000-30000',
+        收入: '20000-30000',
+        marital_status: '已婚',
+        婚姻状态: '已婚',
+        family_status: '有孩子',
+        relationships: [
+          {
+            human_name_1: '李明智',
+            human_name_2: '陈梦',
+            relationship_type: '同事',
+            relationship_strength: 0.764607,
+            start_date: '2021-02-15',
+            end_date: null,
+            created_at: '2024-01-01',
+            updated_at: '2025-06-22'
+          }
+        ],
+        residence: '北京市朝阳区',
+        residence_city: '朝阳区',
+        residence_province: '北京市',
+        residence_country: '中国'
+      },
+      {
+        // 设计师群体
+        id: 'xiaoshe_fallback_designer_004',
+        name: '陈梦',
+        age: 27,
+        gender: '女',
+        education: '本科',
+        profession: 'UI设计师',
+        occupation: 'UI设计师',
+        location: '北京',
+        地区: '北京',
+        interests: ['设计', '艺术', '美食', '旅行'],
+        兴趣爱好: ['设计', '艺术', '美食', '旅行'],
+        personality: '友善开朗',
+        性格特点: '友善开朗',
+        性格: '友善开朗',
+        background: 'UI设计师，收入10000-15000，单身，独居',
+        背景信息: 'UI设计师，收入10000-15000，单身，独居',
+        consumption_habits: '时尚消费，关注设计和美学',
+        消费习惯: '时尚消费，关注设计和美学',
+        favorite_brands: ['苹果', '无印良品', '优衣库', '星巴克'],
+        喜爱品牌: ['苹果', '无印良品', '优衣库', '星巴克'],
+        medical_history: '无重大疾病史',
+        病史: '无重大疾病史',
+        income: '10000-15000',
+        收入: '10000-15000',
+        marital_status: '单身',
+        婚姻状态: '单身',
+        family_status: '独居',
+        relationships: [
+          {
+            human_name_1: '陈梦',
+            human_name_2: '李明智',
+            relationship_type: '同事',
+            relationship_strength: 0.764607,
+            start_date: '2021-02-15',
+            end_date: null,
+            created_at: '2024-01-01',
+            updated_at: '2025-06-22'
+          }
+        ],
+        residence: '北京市朝阳区',
+        residence_city: '朝阳区',
+        residence_province: '北京市',
+        residence_country: '中国'
+      },
+      {
+        // 财务人员群体
+        id: 'xiaoshe_fallback_finance_005',
+        name: '张小娟',
+        age: 27,
+        gender: '女',
+        education: '本科',
+        profession: '财务',
+        occupation: '财务',
+        location: '北京',
+        地区: '北京',
+        interests: ['理财', '阅读', '瑜伽', '烘焙'],
+        兴趣爱好: ['理财', '阅读', '瑜伽', '烘焙'],
+        personality: '友善开朗',
+        性格特点: '友善开朗',
+        性格: '友善开朗',
+        background: '财务，收入8000-12000，单身，与室友合租',
+        背景信息: '财务，收入8000-12000，单身，与室友合租',
+        consumption_habits: '节俭消费，理性规划',
+        消费习惯: '节俭消费，理性规划',
+        favorite_brands: ['招商银行', '支付宝', '京东', '网易云音乐'],
+        喜爱品牌: ['招商银行', '支付宝', '京东', '网易云音乐'],
+        medical_history: '无重大疾病史',
+        病史: '无重大疾病史',
+        income: '8000-12000',
+        收入: '8000-12000',
+        marital_status: '单身',
+        婚姻状态: '单身',
+        family_status: '与室友合租',
+        relationships: [
+          {
+            human_name_1: '张小娟',
+            human_name_2: '陈梦',
+            relationship_type: '朋友',
+            relationship_strength: 0.65,
+            start_date: '2022-03-10',
+            end_date: null,
+            created_at: '2024-01-01',
+            updated_at: '2024-08-10'
+          }
+        ],
+        residence: '北京市海淀区',
+        residence_city: '海淀区',
+        residence_province: '北京市',
+        residence_country: '中国'
+      }
+    ];
+
+    console.log(`🌟 加载小社会备用数字人信息 (总数: ${xiaosheFallbackProfiles.length}):`);
+    
+    // 转换为系统需要的格式
+    xiaosheFallbackProfiles.forEach((human: any, index: number) => {
+      const profile: DigitalPersonProfile = {
+        id: human.id,
+        name: human.name || human.姓名,
+        age: typeof human.age === 'string' ? parseInt(human.age) : human.age,
+        gender: human.gender || human.性别,
+        education: human.education || human.学历,
+        occupation: human.profession || human.occupation || human.职业,
+        location: human.location || human.地区,
+        interests: human.interests || human.兴趣爱好,
+        personality: human.personality || human.性格特点 || human.性格,
+        background: human.background || human.背景信息,
+        preferences: {
+          consumption_habits: human.consumption_habits || human.消费习惯,
+          favorite_brands: human.favorite_brands || human.喜爱品牌,
+          medical_history: human.medical_history || human.病史,
+          income: human.income || human.收入,
+          marital_status: human.marital_status || human.婚姻状态,
+          family_status: human.family_status,
+          relationships: human.relationships,
+          residence: human.residence,
+          residence_city: human.residence_city,
+          residence_province: human.residence_province,
+          residence_country: human.residence_country
+        }
+      };
+      
+      this.profiles.set(profile.id, profile);
+      console.log(`👤 加载小社会备用数字人 ${index + 1}: ${profile.name} (${profile.age}岁, ${profile.occupation})`);
+      console.log(`   📍 位置: ${profile.location}, 教育: ${profile.education}`);
+      console.log(`   💡 性格: ${profile.personality}`);
+      console.log(`   💰 收入: ${profile.preferences?.income}`);
+      console.log(`   👥 婚姻状况: ${profile.preferences?.marital_status}`);
+    });
+    
+    console.log(`📥 备用方案加载完成，共 ${xiaosheFallbackProfiles.length} 个完整的小社会数据结构数字人`);
+  }
+
+  /**
+   * 初始化管理器 - 增加小社会系统备用方案
    */
   async initialize(): Promise<void> {
     console.log('👤 初始化数字人档案管理器...');
     
-    // 智能高性能模式：优先尝试小社会API，失败则使用内置档案
+    // 智能高性能模式：优先尝试小社会API，失败则使用备用方案
     try {
       console.log('🌐 尝试连接小社会API...');
       await this.testXiaosheAPI();
@@ -108,9 +389,12 @@ export class DigitalPersonManager {
       await this.loadProfilesFromAPI();
       
     } catch (error) {
-      console.warn('⚠️ API获取失败，使用默认档案:', error instanceof Error ? error.message : String(error));
-      console.log('💡 小社会API配置待优化，当前使用内置高性能数字人档案');
-      console.log('📍 提示：检查XIAOSHE_API_URL环境变量和服务状态');
+      console.warn('⚠️ 小社会API连接失败，启动备用方案:', error instanceof Error ? error.message : String(error));
+      console.log('🔄 激活本地模拟小社会数字人备用方案...');
+      
+      // 启动备用方案：加载模拟的小社会数字人
+      this.loadXiaosheFallbackProfiles();
+      console.log('✅ 本地备用方案启动成功，包含完整的小社会数据结构');
     }
 
     console.log(`✅ 数字人档案管理器初始化完成，共 ${this.profiles.size} 个档案可用`);
@@ -240,7 +524,7 @@ export class DigitalPersonManager {
   }
 
   /**
-   * 智能查询小社会数字人 - 根据问卷需求获取最适合的数字人
+   * 智能查询小社会数字人 - 根据问卷需求获取最适合的数字人（带备用方案）
    */
   async queryDigitalPersonForQuestionnaire(questionnaireUrl: string): Promise<DigitalPersonProfile | null> {
     try {
@@ -292,7 +576,13 @@ export class DigitalPersonManager {
               favorite_brands: human.favorite_brands || human.喜爱品牌 || [],
               medical_history: human.medical_history || human.病史,
               income: human.income || human.收入,
-              marital_status: human.marital_status || human.婚姻状态
+              marital_status: human.marital_status || human.婚姻状态,
+              family_status: human.family_status,
+              relationships: human.relationships,
+              residence: human.residence,
+              residence_city: human.residence_city,
+              residence_province: human.residence_province,
+              residence_country: human.residence_country
             }
           };
           
@@ -308,8 +598,57 @@ export class DigitalPersonManager {
       
     } catch (error) {
       console.warn(`⚠️ 小社会API智能查询失败:`, error instanceof Error ? error.message : String(error));
+      console.log(`🔄 启动智能备用方案匹配...`);
+      
+      // 备用方案：从本地备用档案中智能选择
+      return this.queryFromFallbackProfiles(questionnaireUrl);
+    }
+  }
+
+  /**
+   * 从备用档案中智能选择适合的数字人
+   */
+  private queryFromFallbackProfiles(questionnaireUrl: string): DigitalPersonProfile | null {
+    console.log(`🔍 从备用档案中智能匹配数字人...`);
+    
+    // 获取所有备用档案
+    const fallbackProfiles = Array.from(this.profiles.values()).filter(p => 
+      p.id.startsWith('xiaoshe_fallback_')
+    );
+    
+    if (fallbackProfiles.length === 0) {
+      console.warn(`⚠️ 没有可用的备用档案`);
       return null;
     }
+    
+    // 根据问卷URL智能匹配
+    let selectedProfile: DigitalPersonProfile;
+    
+    if (questionnaireUrl.includes('student') || questionnaireUrl.includes('学生') || questionnaireUrl.includes('大学')) {
+      // 选择学生群体
+      selectedProfile = fallbackProfiles.find(p => p.age <= 25) || fallbackProfiles[0]!;
+      console.log(`🎯 匹配学生群体: ${selectedProfile.name}`);
+    } else if (questionnaireUrl.includes('shopping') || questionnaireUrl.includes('购物') || questionnaireUrl.includes('消费')) {
+      // 选择有购买力的群体
+      selectedProfile = fallbackProfiles.find(p => 
+        p.preferences?.income && !p.preferences.income.includes('8000')
+      ) || fallbackProfiles[2] || fallbackProfiles[0]!; // 默认选择管理层或第一个
+      console.log(`🎯 匹配消费群体: ${selectedProfile.name}`);
+    } else if (questionnaireUrl.includes('work') || questionnaireUrl.includes('工作') || questionnaireUrl.includes('职场')) {
+      // 选择职场经验丰富的
+      selectedProfile = fallbackProfiles.find(p => p.age >= 28) || fallbackProfiles[1] || fallbackProfiles[0]!;
+      console.log(`🎯 匹配职场群体: ${selectedProfile.name}`);
+    } else {
+      // 随机选择一个
+      selectedProfile = fallbackProfiles[Math.floor(Math.random() * fallbackProfiles.length)]!;
+      console.log(`🎯 随机匹配: ${selectedProfile.name}`);
+    }
+    
+    console.log(`✅ 备用方案匹配成功: ${selectedProfile.name} (${selectedProfile.age}岁, ${selectedProfile.occupation})`);
+    console.log(`   📍 特征: ${selectedProfile.location}, ${selectedProfile.education}, ${selectedProfile.personality}`);
+    console.log(`   💰 收入: ${selectedProfile.preferences?.income}`);
+    
+    return selectedProfile;
   }
 
   /**

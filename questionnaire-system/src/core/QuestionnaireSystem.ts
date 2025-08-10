@@ -109,7 +109,7 @@ export class QuestionnaireSystem {
 
       // 初始化各个组件
       await this.digitalPersonManager.initialize();
-      await this.proxyManager.initialize();
+      // 青果代理管理器已在构造函数中初始化完成
       await this.browserManager.initialize();
       await this.memoryManager.initialize();
 

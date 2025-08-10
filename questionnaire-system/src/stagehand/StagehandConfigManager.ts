@@ -239,13 +239,21 @@ export class StagehandConfigManager {
   }
 
   /**
-   * 检查是否是配额错误
+   * 检查是否是OpenAI相关错误（任何OpenAI错误都会触发降级）
    */
   private isQuotaError(error: any): boolean {
     const errorMessage = error?.message || String(error);
-    return errorMessage.includes('429') || 
+    return errorMessage.includes('openai') || 
+           errorMessage.includes('OpenAI') ||
+           errorMessage.includes('api.openai.com') ||
+           errorMessage.includes('429') || 
+           errorMessage.includes('401') || 
+           errorMessage.includes('402') ||
            errorMessage.includes('quota') || 
-           errorMessage.includes('exceeded your current quota');
+           errorMessage.includes('Incorrect API key') ||
+           errorMessage.includes('exceeded your current quota') ||
+           errorMessage.includes('insufficient_quota') ||
+           errorMessage.toLowerCase().includes('stagehanddefaulterror');
   }
 
   /**

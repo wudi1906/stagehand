@@ -24,7 +24,11 @@ export class AdsPowerManager {
   private profileNameCounter: number = 0;
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || process.env.ADSPOWER_API_URL || 'http://local.adspower.net:50325/api/v1';
+    // 支持多种AdsPower接口地址配置，优先级从高到低
+    this.baseUrl = baseUrl || 
+                   process.env.ADSPOWER_API_URL || 
+                   'http://127.0.0.1:50325/api/v1';  // 更新为新的默认地址
+                   
     this.serialNumber = process.env.ADSPOWER_API_KEY || 'cd606f2e6e4558c9c9f2980e7017b8e9';
     
     console.log(`🌟 AdsPower管理器初始化，API地址: ${this.baseUrl}`);
@@ -32,12 +36,19 @@ export class AdsPowerManager {
   }
 
   /**
-   * 初始化管理器
+   * 初始化管理器 - 自动检测可用的AdsPower接口
    */
   async initialize(): Promise<void> {
     console.log('🌟 初始化AdsPower浏览器管理器...');
-    console.log(`🔍 API地址: ${this.baseUrl}`);
+    console.log(`🔍 当前API地址: ${this.baseUrl}`);
     console.log(`🔑 Serial Number: ${this.serialNumber.substring(0, 8)}...`);
+
+    // 智能接口检测：自动尝试多个可能的接口地址
+    const detectedUrl = await this.autoDetectAdsPowerInterface();
+    if (detectedUrl) {
+      this.baseUrl = detectedUrl;
+      console.log(`✅ 自动检测到可用接口: ${this.baseUrl}`);
+    }
 
     // 智能高性能模式：尝试连接AdsPower
     try {
@@ -50,6 +61,57 @@ export class AdsPowerManager {
       console.log('📍 提示：确保AdsPower软件已启动，API地址正确');
       // 不抛出错误，允许系统使用Stagehand原生模式继续运行
     }
+  }
+
+  /**
+   * 自动检测可用的AdsPower接口地址
+   */
+  private async autoDetectAdsPowerInterface(): Promise<string | null> {
+    console.log('🔍 开始自动检测AdsPower接口地址...');
+    
+    // 可能的接口地址列表（按优先级排序）
+    const possibleUrls = [
+      'http://127.0.0.1:50325/api/v1',           // 新版本默认地址
+      'http://localhost:50325/api/v1',           // 本地回环地址
+      'http://local.adspower.net:50325/api/v1',  // 旧版本域名地址
+      'http://local.adspower.com:50325/api/v1',  // 可能的域名变体
+      'http://192.168.1.100:50325/api/v1',       // 局域网地址示例（实际应动态获取）
+    ];
+    
+    // 如果有环境变量指定，优先使用
+    if (process.env.ADSPOWER_API_URL) {
+      possibleUrls.unshift(process.env.ADSPOWER_API_URL);
+    }
+    
+    for (const url of possibleUrls) {
+      console.log(`🔍 测试接口: ${url}`);
+      
+      try {
+        const response = await axios.get(`${url}/browser/start?user_id=connection_test`, {
+          timeout: 5000,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.status === 200) {
+          console.log(`✅ 接口检测成功: ${url}`);
+          return url;
+        }
+        
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.log(`❌ 接口检测失败: ${url} (${errorMsg})`);
+        
+        // 如果是404或API响应错误，说明服务是运行的，只是endpoint不对
+        if (axios.isAxiosError(error) && error.response?.status === 404) {
+          console.log(`💡 服务运行中但API路径可能有变化: ${url}`);
+        }
+      }
+    }
+    
+    console.log('⚠️ 所有接口检测都失败了');
+    return null;
   }
 
   /**
@@ -378,7 +440,7 @@ export class AdsPowerManager {
       baseConfig.user_proxy_config = {
         proxy_type: 'http',  // 🔧 青果代理使用http类型（参照web-ui成功配置）
         proxy_host: proxyInfo.host,
-        proxy_port: parseInt(proxyInfo.port),  // 确保端口是数字
+        proxy_port: typeof proxyInfo.port === 'string' ? parseInt(proxyInfo.port) : proxyInfo.port,
         proxy_user: proxyInfo.username,
         proxy_password: proxyInfo.password,
         proxy_soft: 'other'

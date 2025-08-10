@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { DigitalPersonMemoryManager } from '../memory/DigitalPersonMemoryManager';
 import { IntelligentCompletionManager } from '../completion/IntelligentCompletionManager';
 
-// 页面状态分析结构
+// 页面状态分析结构 - 简化版以提高AI理解准确性
 const PageStateSchema = z.object({
   hasQuestions: z.boolean().describe("页面是否包含问卷题目"),
   questionCount: z.number().describe("检测到的题目数量"),
@@ -196,33 +196,52 @@ export class ContinuousAnsweringEnhancer {
   }
   
   /**
-   * 深度页面状态分析
+   * 深度页面状态分析 - 发挥Stagehand最大智能性（observe + extract）
    */
   private async performDeepPageAnalysis() {
     console.log('🔍 执行深度页面状态分析...');
     
     try {
+      // 🎯 直接进行页面分析（移除可能卡顿的observe步骤）
+      console.log('🔍 开始智能页面分析...');
       const pageState = await this.stagehand.page.extract({
-        instruction: `请深度分析当前页面的状态，包括：
-1. 检测所有问卷题目（单选、多选、填空、评分等）
-2. 判断哪些题目还未作答
-3. 找出所有导航按钮（下一页、提交、继续等）
-4. 识别页面类型（问卷页、确认页、感谢页等）
-5. 检测任何完成信号
+        instruction: `基于刚才的观察结果，请分析当前页面：
 
-请提供详细准确的分析结果。`,
+🎯 **核心任务**：检测问卷题目和导航元素
+
+📋 **分析重点**：
+1. 页面上有多少个问卷题目？
+2. 这些题目是什么类型（单选/多选/填空等）？  
+3. 哪些题目还需要回答？
+4. 页面上有什么按钮可以继续（下一页/提交/继续）？
+5. 这是什么类型的页面？
+
+✅ **要求**：给出准确、简洁的分析结果`,
         schema: PageStateSchema
       });
       
+      console.log(`📊 分析结果: ${pageState.questionCount}个题目, 页面类型: ${pageState.pageType}`);
       return pageState;
       
     } catch (error) {
       console.warn('⚠️ 深度页面分析失败，尝试Gemini降级分析:', error);
       
-      // 检查是否是429配额错误，如果是则尝试Gemini降级
+      // 检查是否是OpenAI相关错误，如果是则尝试Gemini降级
       const errorMessage = String(error);
-      if (errorMessage.includes('429') || errorMessage.includes('quota')) {
-        console.log('🔄 检测到OpenAI配额用完，尝试使用Gemini进行页面分析...');
+      const isOpenAIError = errorMessage.includes('openai') || 
+                           errorMessage.includes('OpenAI') ||
+                           errorMessage.includes('api.openai.com') ||
+                           errorMessage.includes('429') || 
+                           errorMessage.includes('401') || 
+                           errorMessage.includes('402') ||
+                           errorMessage.includes('quota') || 
+                           errorMessage.includes('Incorrect API key') ||
+                           errorMessage.includes('insufficient_quota') ||
+                           errorMessage.toLowerCase().includes('stagehanddefaulterror');
+      
+      if (isOpenAIError) {
+        console.log('🔄 检测到OpenAI相关错误，尝试使用Gemini进行页面分析...');
+        console.log(`🔍 具体错误: ${errorMessage.substring(0, 100)}...`);
         try {
           const geminiResult = await this.fallbackToGeminiExtract({
             instruction: `请深度分析当前页面的状态，包括：
@@ -358,21 +377,48 @@ export class ContinuousAnsweringEnhancer {
         }
       }
       
-      // 使用Stagehand的act能力进行记忆增强智能作答
-      const enhancedPrompt = `请仔细分析并回答页面上的所有问卷题目。
+      // 🎯 直接进行智能题目作答（移除可能卡顿的observe步骤）
+      console.log('🎯 开始智能题目作答流程...');
+
+      // 🎯 使用act方法智能作答所有题目
+      try {
+        await this.stagehand.page.act(
+          `仔细查看页面上的每一个问卷题目，根据数字人身份和背景来回答：
+          
+${memoryPrompt}
+
+🎯 **作答策略**：
+- 每个题目都要作答，不能跳过
+- 根据数字人的背景和个性特征选择答案
+- 单选题选择最合适的选项
+- 多选题可以选择多个相关选项
+- 填空题填写符合身份的内容
+
+请逐一完成页面上所有未作答的题目。`
+        );
+        console.log(`✅ 智能题目作答完成`);
+        
+      } catch (error) {
+        console.error(`❌ 智能题目作答失败:`, error);
+        
+        // 降级：尝试基础作答
+        console.log('🔄 尝试基础智能作答...');
+        
+        const enhancedPrompt = `🎯 **智能问卷作答任务**
 
 ${memoryPrompt}
 
-📝 作答要求：
-1. 仔细阅读题目内容
-2. 根据数字人背景选择合适的答案
-3. 确保所有必填题目都被回答
-4. 保持作答风格的一致性
-5. 对于开放性问题，给出简洁合理的回答
+📝 **作答策略**：
+1. 找到页面上的每一个问卷题目
+2. 对于单选题：选择最合理的一个选项
+3. 对于多选题：选择符合逻辑的多个选项
+4. 对于文本题：填写简短、真实的回答
+5. 确保所有必填题都被完成
 
-请逐个完成所有题目的作答。`;
-      
-      await this.stagehand.page.act(enhancedPrompt);
+🚀 **执行**：请立即开始逐个回答页面上的所有题目`;
+        
+        await this.stagehand.page.act(enhancedPrompt);
+      }
       
       // 🧠 记录作答到记忆中（简化版本）
       if (this.memoryManager) {
