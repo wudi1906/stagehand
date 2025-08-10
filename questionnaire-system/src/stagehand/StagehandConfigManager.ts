@@ -183,13 +183,18 @@ export class StagehandConfigManager {
    * 包装Stagehand方法，添加运行时降级
    */
   private wrapStagehandWithFallback(stagehand: Stagehand): void {
+    console.log('🔧 DEBUG: 开始应用运行时降级包装器...');
     const originalPage = stagehand.page;
     
     if (originalPage) {
+      console.log('🔧 DEBUG: 找到stagehand.page，开始包装方法...');
       // 包装extract方法
       const originalExtract = originalPage.extract.bind(originalPage);
+      console.log('🔧 DEBUG: 原始extract方法类型:', typeof originalExtract);
+      
       (originalPage as any).extract = async (...args: any[]) => {
         console.log('🔧 运行时包装器：正在执行extract操作...');
+        console.log('🔧 DEBUG: extract包装器被调用，参数数量:', args.length);
         try {
           const result = await (originalExtract as any)(...args);
           console.log('✅ 运行时包装器：extract操作成功');
@@ -235,7 +240,13 @@ export class StagehandConfigManager {
           throw error;
         }
       };
+      
+      console.log('🔧 DEBUG: extract方法包装完成');
+    } else {
+      console.log('❌ DEBUG: stagehand.page不存在，无法应用包装器');
     }
+    
+    console.log('✅ DEBUG: 运行时降级包装器应用完成');
   }
 
   /**
@@ -243,6 +254,9 @@ export class StagehandConfigManager {
    */
   private isQuotaError(error: any): boolean {
     const errorMessage = error?.message || String(error);
+    const fullError = String(error);
+    
+    // 检查所有可能的OpenAI相关错误
     return errorMessage.includes('openai') || 
            errorMessage.includes('OpenAI') ||
            errorMessage.includes('api.openai.com') ||
@@ -253,7 +267,14 @@ export class StagehandConfigManager {
            errorMessage.includes('Incorrect API key') ||
            errorMessage.includes('exceeded your current quota') ||
            errorMessage.includes('insufficient_quota') ||
-           errorMessage.toLowerCase().includes('stagehanddefaulterror');
+           errorMessage.includes('Connection error') ||  // 新增：连接错误
+           errorMessage.includes('connect ECONNREFUSED') ||  // 新增：连接被拒绝
+           errorMessage.includes('getaddrinfo ENOTFOUND') ||  // 新增：DNS解析失败
+           errorMessage.includes('timeout') ||  // 新增：超时错误
+           fullError.toLowerCase().includes('stagehanddefaulterror') ||
+           fullError.includes('Connection error') ||  // 检查完整错误信息
+           fullError.includes('connect timeout') ||
+           fullError.includes('network error');  // 新增：网络错误
   }
 
   /**
@@ -263,10 +284,14 @@ export class StagehandConfigManager {
     console.log(`🔄 运行时降级：使用Gemini执行${method}操作...`);
     
     try {
-      // 创建新的Gemini Stagehand实例
+      // 获取当前AdsPower调试端口
+      const currentPort = (global as any).currentAdsPowerPort || 62907; // 使用存储的端口或默认端口
+      console.log(`🔗 使用AdsPower调试端口: ${currentPort}`);
+      
+      // 创建新的Gemini Stagehand实例，连接到同一个AdsPower浏览器
       const fallbackConfig = this.buildFallbackConfig({
         localBrowserLaunchOptions: {
-          cdpUrl: `http://127.0.0.1:54207` // 使用固定端口，实际应从日志获取
+          cdpUrl: `http://127.0.0.1:${currentPort}`
         }
       });
       
@@ -280,6 +305,14 @@ export class StagehandConfigManager {
       if (methodFn) {
         const result = await methodFn.apply(page, args);
         console.log(`✅ Gemini${method}操作成功`);
+        
+        // 清理Gemini实例（但不关闭浏览器）
+        try {
+          await geminiStagehand.close();
+        } catch (closeError) {
+          console.warn('⚠️ Gemini实例清理时出现警告:', closeError);
+        }
+        
         return result;
       } else {
         throw new Error(`方法 ${method} 在Gemini Stagehand中不存在`);

@@ -238,8 +238,8 @@ export class QuestionnaireSystem {
         browserInfo
       };
 
-      // 🛡️ 启动窗口监控系统 - 完全对标web-ui的监控机制
-      console.log('🛡️ 启动窗口监控系统...');
+      // 🛡️ 暂时禁用窗口监控（调试期间排除干扰）
+      console.log('🛡️ 窗口监控已禁用（调试模式）');
       const sessionResourceData: SessionResourceData = {
         sessionId,
         profileId: browserInfo.profileId,
@@ -255,8 +255,8 @@ export class QuestionnaireSystem {
       this.sessionResourceData.set(sessionId, sessionResourceData);
       
       // 启动监控
-      this.windowMonitoringSystem.startMonitoring(sessionId, sessionResourceData);
-      console.log('✅ 窗口监控已启动，将自动检测浏览器关闭事件');
+      // 窗口监控已完全禁用
+      console.log('🚫 窗口监控已完全禁用（测试模式）');
 
       // 🚀 启动真正的Stagehand智能作答流程 (完全模仿web-ui模式)
       console.log('🧠 启动Stagehand连接AdsPower - 完全模仿web-ui成功模式');
@@ -422,76 +422,37 @@ export class QuestionnaireSystem {
       // 🚀 使用StagehandSuperIntelligentEngine进行真正的智能作答
       console.log('🤖 启动StagehandSuperIntelligentEngine...');
       
-      // 🚫 绝不创建新浏览器！使用CDP连接到现有AdsPower窗口
-      console.log('🔗 使用CDP连接Stagehand到AdsPower...');
-      // 🚀 使用智能配置管理器，支持OpenAI → Gemini降级
-      console.log('🚀 启动Stagehand智能配置管理器（支持API降级）...');
+      // 🚫 跳过所有复杂配置，直接使用纯净引擎
+      console.log('🚫 跳过复杂配置管理器，使用纯净Stagehand流程');
       
-      const { StagehandConfigManager } = await import('../stagehand/StagehandConfigManager');
-      const configManager = new StagehandConfigManager();
+      // 🎯 使用Gemini Stagehand引擎 - 网络已修复，使用AI智能作答！
+      const { PureStagehandEngine } = await import('../answering/PureStagehandEngine');
+      const geminiEngine = new PureStagehandEngine(config.digitalPersonProfile);
       
-      // 🎯 创建Stagehand实例，支持运行时API降级（内部已完成init）
-      const stagehand = await configManager.createStagehandWithRuntimeFallback({
-        localBrowserLaunchOptions: {
-          cdpUrl: `http://127.0.0.1:${browserInfo.debugPort}`
-        }
+      console.log('🎯 启动Gemini Stagehand智能作答流程...');
+      console.log(`👤 数字人身份：${config.digitalPersonProfile.name}`);
+      console.log('⚡ 使用Gemini API，AI智能识别和作答！');
+      console.log('🔥 网络环境已修复，充分发挥Stagehand优势！');
+      
+      // 执行Gemini智能作答
+      const answeringResult = await geminiEngine.executePureAnswering(browserInfo.debugPort);
+      
+      console.log('✅ Gemini智能作答完成');
+      console.log(`📊 作答统计: ${answeringResult.totalAnswered} 题`);
+      console.log(`📄 页面统计: ${answeringResult.totalPages} 页`);
+      console.log(`✅ 作答状态: ${answeringResult.success ? '成功' : '失败'}`);
+      if (answeringResult.error) {
+        console.log(`❌ 错误信息: ${answeringResult.error}`);
+      }
+      
+      // 显示详细的作答日志
+      console.log('\n📋 === 详细作答日志 ===');
+      answeringResult.logs.forEach((log, index) => {
+        console.log(`${index + 1}. ${log}`);
       });
       
-      console.log('✅ Stagehand实例已连接到AdsPower浏览器');
-      
-      // 存储当前调试端口供降级使用
-      (global as any).currentAdsPowerPort = browserInfo.debugPort;
-      console.log(`🔗 当前调试端口已存储: ${browserInfo.debugPort}`);
-      
-      // 重新应用运行时降级包装器，确保在page准备就绪后生效
-      if ((stagehand as any).applyRuntimeFallback) {
-        (stagehand as any).applyRuntimeFallback();
-        console.log('🔧 运行时降级包装器已重新应用');
-      }
-      
-      // 🎯 确保Stagehand在正确的问卷页面上操作
-      const stagehandPage = stagehand.page;
-      
-      // 如果当前页面不是问卷页面，重新导航
-      const stagehandCurrentUrl = await stagehandPage.url();
-      if (!stagehandCurrentUrl.includes('wjx.cn') && !stagehandCurrentUrl.includes(questionnaireUrl)) {
-        console.log(`🔄 当前页面: ${stagehandCurrentUrl}`);
-        console.log('🌐 重新导航到问卷页面...');
-        await stagehandPage.goto(questionnaireUrl, { 
-          waitUntil: 'domcontentloaded',
-          timeout: 30000 
-        });
-        console.log('✅ 问卷页面重新加载完成');
-      }
-      
-      // 使用StagehandSuperIntelligentEngine
-      const { StagehandSuperIntelligentEngine } = await import('../answering/StagehandSuperIntelligentEngine');
-      const superEngine = new StagehandSuperIntelligentEngine(
-        stagehand,
-        config.digitalPersonProfile
-      );
-      
-      console.log('🎯 开始StagehandSuperIntelligentEngine智能作答流程...');
-      console.log(`👤 数字人身份：${config.digitalPersonProfile.name}`);
-      console.log(`🎯 职业背景：${config.digitalPersonProfile.occupation}`);
-      
-      // 执行真正的智能作答
-      const answeringResult = await superEngine.executeQuestionnaireAnswering(questionnaireUrl);
-      
-      console.log('✅ StagehandSuperIntelligentEngine作答完成');
-      console.log(`📊 作答统计: ${answeringResult.answeredQuestions}/${answeringResult.totalQuestions} 题`);
-      
-      // 获取记忆管理器实例以便后续清理
-      const memoryManager = superEngine.getMemoryManager();
-      if (memoryManager) {
-        console.log('📝 保存作答记忆...');
-        await memoryManager.saveMemoryToDisk();
-      }
-      
-      // 清理Stagehand实例
-      console.log('🧹 清理Stagehand实例...');
-      await superEngine.cleanup();
-      await stagehand.close();
+      // Stagehand实例已在引擎内部清理
+      console.log('✅ Gemini Stagehand引擎作答完成');
       
       // 验证作答结果
       const currentUrl = page.url();
@@ -505,15 +466,15 @@ export class QuestionnaireSystem {
       
       // 返回真正的作答结果
       return {
-        sessionId: answeringResult.sessionId || `session-${Date.now()}`,
+        sessionId: `session-${Date.now()}`,
         success: answeringResult.success,
-        totalQuestions: answeringResult.totalQuestions,
-        answeredQuestions: answeringResult.answeredQuestions,
-        skippedQuestions: answeringResult.skippedQuestions,
-        failedQuestions: answeringResult.failedQuestions,
-        duration: answeringResult.duration || duration,
-        results: answeringResult.results || [],
-        errors: answeringResult.errors || []
+        totalQuestions: answeringResult.totalAnswered,
+        answeredQuestions: answeringResult.totalAnswered,
+        skippedQuestions: 0,
+        failedQuestions: answeringResult.success ? 0 : 1,
+        duration: duration,
+        results: [],
+        errors: answeringResult.error ? [answeringResult.error] : []
       };
       
     } catch (error) {

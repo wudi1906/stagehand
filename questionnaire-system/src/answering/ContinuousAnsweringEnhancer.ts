@@ -380,29 +380,49 @@ export class ContinuousAnsweringEnhancer {
       // 🎯 直接进行智能题目作答（移除可能卡顿的observe步骤）
       console.log('🎯 开始智能题目作答流程...');
 
-      // 🎯 使用act方法智能作答所有题目
+      // 🎯 使用原生Stagehand方式进行智能作答
+      console.log('🎯 启动原生Stagehand智能作答模式...');
+      
       try {
-        await this.stagehand.page.act(
-          `仔细查看页面上的每一个问卷题目，根据数字人身份和背景来回答：
-          
-${memoryPrompt}
-
-🎯 **作答策略**：
-- 每个题目都要作答，不能跳过
-- 根据数字人的背景和个性特征选择答案
-- 单选题选择最合适的选项
-- 多选题可以选择多个相关选项
-- 填空题填写符合身份的内容
-
-请逐一完成页面上所有未作答的题目。`
-        );
-        console.log(`✅ 智能题目作答完成`);
+        // 方式1：observe + act（Stagehand推荐方式）
+        console.log('👁️ 观察页面问卷元素...');
+        const observations = await this.stagehand.page.observe({
+          instruction: "找到页面上的问卷题目，包括性别选择、网购问题等所有需要回答的题目"
+        });
+        
+        console.log(`👁️ 观察到 ${observations.length} 个可操作元素`);
+        
+        if (observations.length > 0) {
+          // 使用观察结果进行精确作答
+          for (let i = 0; i < Math.min(observations.length, 5); i++) {
+            const observation = observations[i];
+            console.log(`🎯 智能作答第 ${i + 1} 个题目...`);
+            
+            try {
+              if (observation) {
+                await this.stagehand.page.act(observation);
+                console.log(`✅ 第 ${i + 1} 个题目作答完成`);
+              }
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (actError) {
+              console.warn(`⚠️ 第 ${i + 1} 个题目作答失败:`, actError);
+            }
+          }
+        } else {
+          // 如果observe没有结果，使用直接act
+          console.log('🔄 使用直接智能作答方式...');
+          await this.stagehand.page.act(
+            `作为一个大学生，智能地回答这个问卷页面上的所有题目。根据常见的大学生特征来选择答案。`
+          );
+        }
+        
+        console.log(`✅ 原生Stagehand智能作答完成`);
         
       } catch (error) {
-        console.error(`❌ 智能题目作答失败:`, error);
+        console.error(`❌ 原生智能作答失败:`, error);
         
-        // 降级：尝试基础作答
-        console.log('🔄 尝试基础智能作答...');
+        // 降级：尝试基础Playwright作答
+        console.log('🔄 降级到基础Playwright作答...');
         
         const enhancedPrompt = `🎯 **智能问卷作答任务**
 

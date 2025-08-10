@@ -50,7 +50,7 @@ export class WindowMonitoringSystem {
   
   // 默认监控配置
   private readonly defaultConfig: MonitoringConfig = {
-    checkInterval: 2000,      // 2秒检查一次
+    checkInterval: 10000,     // 10秒检查一次（调试优化）
     maxRetries: 3,           // 最多重试3次
     timeoutDuration: 10000,  // 10秒超时
     enableAutoCleanup: true  // 启用自动清理
