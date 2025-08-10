@@ -17,6 +17,7 @@ export { MemoryManager } from './memory/MemoryManager';
 export { DigitalPersonMemoryManager } from './memory/DigitalPersonMemoryManager';
 export { IntelligentCompletionManager } from './completion/IntelligentCompletionManager';
 export { LifecycleManager } from './lifecycle/LifecycleManager';
+export { StagehandConfigManager } from './stagehand/StagehandConfigManager';
 export { WindowMonitoringSystem } from './lifecycle/WindowMonitoringSystem';
 export { UnifiedResourceCleanupManager } from './lifecycle/UnifiedResourceCleanupManager';
 export { WebInterface } from './web/WebInterface';

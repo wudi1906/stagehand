@@ -18,8 +18,8 @@ const PageStateSchema = z.object({
     hasNextButton: z.boolean().describe("是否有下一页按钮"),
     hasSubmitButton: z.boolean().describe("是否有提交按钮"),
     hasContinueButton: z.boolean().describe("是否有继续按钮"),
-    nextButtonText: z.string().optional().describe("下一页按钮文本"),
-    submitButtonText: z.string().optional().describe("提交按钮文本")
+    nextButtonText: z.string().nullable().describe("下一页按钮文本"),
+    submitButtonText: z.string().nullable().describe("提交按钮文本")
   }),
   pageType: z.enum(['questionnaire', 'confirmation', 'thank_you', 'error', 'unknown']).describe("页面类型"),
   completionSignals: z.array(z.string()).describe("检测到的完成信号")
@@ -217,9 +217,32 @@ export class ContinuousAnsweringEnhancer {
       return pageState;
       
     } catch (error) {
-      console.warn('⚠️ 深度页面分析失败，使用备用分析:', error);
+      console.warn('⚠️ 深度页面分析失败，尝试Gemini降级分析:', error);
       
-      // 备用简化分析
+      // 检查是否是429配额错误，如果是则尝试Gemini降级
+      const errorMessage = String(error);
+      if (errorMessage.includes('429') || errorMessage.includes('quota')) {
+        console.log('🔄 检测到OpenAI配额用完，尝试使用Gemini进行页面分析...');
+        try {
+          const geminiResult = await this.fallbackToGeminiExtract({
+            instruction: `请深度分析当前页面的状态，包括：
+1. 检测所有问卷题目（单选、多选、填空、评分等）
+2. 判断哪些题目还未作答
+3. 找出所有导航按钮（下一页、提交、继续等）
+4. 识别页面类型（问卷页、确认页、感谢页等）
+5. 检测任何完成信号
+
+请提供详细准确的分析结果。`,
+            schema: PageStateSchema
+          });
+          console.log('✅ Gemini页面分析成功');
+          return geminiResult;
+        } catch (geminiError) {
+          console.warn('❌ Gemini分析也失败，使用备用分析:', geminiError);
+        }
+      }
+      
+      // 最后的备用简化分析
       return {
         hasQuestions: true,
         questionCount: 1,
@@ -235,6 +258,62 @@ export class ContinuousAnsweringEnhancer {
     }
   }
   
+  /**
+   * Gemini降级Extract方法
+   */
+  private async fallbackToGeminiExtract(params: any): Promise<any> {
+    console.log('🔄 创建Gemini Stagehand实例进行降级...');
+    
+    try {
+      // 动态导入Stagehand
+      const { Stagehand } = await import('@browserbasehq/stagehand');
+      
+      // 创建Gemini配置（使用GOOGLE_API_KEY）
+      const geminiStagehand = new Stagehand({
+        env: 'LOCAL',
+        modelName: 'gemini-2.0-flash', // 使用标准Gemini模型名称
+        enableCaching: true,
+        apiKey: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY, // 优先使用GOOGLE_API_KEY
+        localBrowserLaunchOptions: {
+          cdpUrl: await this.getCurrentBrowserCdpUrl()
+        }
+      });
+      
+      await geminiStagehand.init();
+      
+      // 执行extract操作
+      const result = await geminiStagehand.page.extract(params);
+      
+      console.log('✅ Gemini降级操作成功');
+      return result;
+      
+    } catch (fallbackError) {
+      console.error('❌ Gemini降级失败:', fallbackError);
+      throw fallbackError;
+    }
+  }
+
+  /**
+   * 获取当前浏览器的CDP URL
+   */
+  private async getCurrentBrowserCdpUrl(): Promise<string> {
+    try {
+      // 尝试从当前stagehand获取CDP信息
+      const currentUrl = await this.stagehand.page.url();
+      console.log('🔍 当前页面URL:', currentUrl);
+      
+      // 从环境或全局变量获取当前运行的调试端口
+      // 检查是否有全局存储的端口信息
+      const currentPort = (global as any).currentAdsPowerPort || '57264'; // 从日志看到的实际端口
+      const cdpUrl = `http://127.0.0.1:${currentPort}`;
+      console.log('🔗 使用CDP URL:', cdpUrl);
+      return cdpUrl;
+    } catch (error) {
+      console.warn('⚠️ 无法获取当前CDP端口，使用默认值');
+      return `http://127.0.0.1:57264`; // 使用日志中显示的实际端口
+    }
+  }
+
   /**
    * 获取智能完成检测管理器
    */

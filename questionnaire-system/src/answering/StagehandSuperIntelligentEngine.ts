@@ -16,16 +16,16 @@ const PageAnalysisSchema = z.object({
     id: z.string().describe("题目唯一标识"),
     type: z.enum(['single_choice', 'multiple_choice', 'text_input', 'textarea', 'rating', 'slider', 'checkbox']).describe("题目类型"),
     text: z.string().describe("题目文本"),
-    options: z.array(z.string()).optional().describe("选择题选项"),
+    options: z.array(z.string()).nullable().describe("选择题选项"),
     isRequired: z.boolean().describe("是否必填"),
     isAnswered: z.boolean().describe("是否已作答")
   })),
   hasSubmitButton: z.boolean().describe("是否有提交按钮"),
-  submitButtonText: z.string().optional().describe("提交按钮文本"),
+  submitButtonText: z.string().nullable().describe("提交按钮文本"),
   pageProgress: z.string().describe("页面进度描述"),
   isCompletePage: z.boolean().describe("是否为完成页面"),
   hasNextPage: z.boolean().describe("是否有下一页"),
-  nextButtonText: z.string().optional().describe("下一页按钮文本")
+  nextButtonText: z.string().nullable().describe("下一页按钮文本")
 });
 
 // 完成检测结构
@@ -148,14 +148,39 @@ export class StagehandSuperIntelligentEngine {
     
     try {
       const analysis = await this.stagehand.page.extract({
-        instruction: `请仔细分析当前问卷页面的所有内容，包括：
-1. 识别所有问卷题目（单选、多选、填空、文本框等）
-2. 检测题目是否已经作答
-3. 找出所有提交按钮、下一页按钮
-4. 判断是否为问卷完成页面
-5. 评估页面进度和状态
+        instruction: `作为智能问卷分析专家，请深度分析当前页面：
 
-请提供详细而准确的分析结果。`,
+🎯 核心任务：识别所有可操作的问卷元素
+
+📋 分析要求：
+1. **题目识别**：找到页面上的所有问题，包括：
+   - 单选题：radio buttons, 选择一个答案
+   - 多选题：checkboxes, 可选择多个答案  
+   - 文本输入：text inputs, textareas
+   - 评分题：rating scales, sliders
+   - 下拉选择：select dropdowns
+   - 其他交互元素
+
+2. **题目信息提取**：
+   - 题目的完整文本内容
+   - 所有可选选项的文本
+   - 是否为必填项
+   - 当前是否已作答
+
+3. **导航元素**：
+   - 提交按钮的确切文本和位置
+   - 下一页/继续按钮
+   - 页面进度指示
+
+4. **完成状态**：
+   - 是否为问卷结束页面
+   - 是否显示感谢信息
+   - 是否需要继续填写
+
+🔍 特别注意：
+- 忽略装饰性元素，专注功能性内容
+- 准确识别必填和选填项
+- 检测页面是否有未完成的必填项`,
         schema: PageAnalysisSchema
       });
 
@@ -238,11 +263,11 @@ export class StagehandSuperIntelligentEngine {
       try {
         console.log(`🎯 正在作答: ${question.text.slice(0, 50)}...`);
         
-        // 根据题目类型选择最佳作答策略
-        const answerStrategy = await this.determineAnswerStrategy(question, personalityContext);
+        // 🎯 通用智能作答策略 - 适配所有网站和题目类型
+        const answerAction = await this.createUniversalAnswerAction(question, personalityContext);
         
         // 执行智能作答
-        await this.stagehand.page.act(answerStrategy);
+        await this.stagehand.page.act(answerAction);
         
         pageResult.questionsAnswered++;
         console.log(`✅ 作答成功`);
@@ -259,6 +284,75 @@ export class StagehandSuperIntelligentEngine {
 
     console.log(`📊 当前页面作答完成: ${pageResult.questionsAnswered}个成功，${pageResult.questionsFailed}个失败`);
     return pageResult;
+  }
+
+  /**
+   * 创建通用智能作答动作 - 适配所有网站和题目类型
+   */
+  private async createUniversalAnswerAction(question: any, personalityContext: string): Promise<string> {
+    const questionText = question.text;
+    const questionType = question.type;
+    const options = question.options;
+    
+    // 🧠 构建智能作答指令
+    let answerInstruction = `作为${personalityContext}，请智能回答以下问题：
+
+📋 题目：${questionText}
+
+`;
+
+    // 🎯 根据题目类型制定通用作答策略
+    switch (questionType) {
+      case 'single_choice':
+        if (options && options.length > 0) {
+          answerInstruction += `📝 这是单选题，可选项：${options.join('、')}
+🎯 作答要求：根据我的身份特征选择最符合的一个选项，点击对应的单选按钮`;
+        } else {
+          answerInstruction += `📝 这是单选题
+🎯 作答要求：根据页面上的选项，选择最符合我身份特征的答案`;
+        }
+        break;
+        
+      case 'multiple_choice':
+        if (options && options.length > 0) {
+          answerInstruction += `📝 这是多选题，可选项：${options.join('、')}
+🎯 作答要求：可以选择多个符合我身份特征的选项，勾选相应的复选框`;
+        } else {
+          answerInstruction += `📝 这是多选题
+🎯 作答要求：根据页面上的选项，选择所有符合我身份特征的答案`;
+        }
+        break;
+        
+      case 'text_input':
+        answerInstruction += `📝 这是文本输入题
+🎯 作答要求：在输入框中填写符合我身份特征的简短回答（10-50字）`;
+        break;
+        
+      case 'textarea':
+        answerInstruction += `📝 这是长文本题
+🎯 作答要求：在文本框中填写详细的、符合我身份特征的回答（50-200字）`;
+        break;
+        
+      case 'rating':
+      case 'slider':
+        answerInstruction += `📝 这是评分题
+🎯 作答要求：根据我的身份特征和偏好，选择合适的评分等级`;
+        break;
+        
+      default:
+        answerInstruction += `📝 这是问卷题目
+🎯 作答要求：根据页面上的交互元素，选择或填写最符合我身份特征的答案`;
+    }
+    
+    answerInstruction += `
+
+💡 作答原则：
+- 保持与我的年龄、性别、职业、教育背景一致
+- 回答要自然、真实、符合逻辑
+- 如果是必填项，务必完成作答
+- 优先选择常见、合理的答案`;
+
+    return answerInstruction;
   }
 
   /**

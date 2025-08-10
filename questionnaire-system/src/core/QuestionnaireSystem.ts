@@ -424,20 +424,30 @@ export class QuestionnaireSystem {
       
       // 🚫 绝不创建新浏览器！使用CDP连接到现有AdsPower窗口
       console.log('🔗 使用CDP连接Stagehand到AdsPower...');
-      const { Stagehand } = await import('@browserbasehq/stagehand');
-      const stagehand = new Stagehand({
-        env: 'LOCAL',
-        modelName: 'gpt-4o',
-        enableCaching: true,
+      // 🚀 使用智能配置管理器，支持OpenAI → Gemini降级
+      console.log('🚀 启动Stagehand智能配置管理器（支持API降级）...');
+      
+      const { StagehandConfigManager } = await import('../stagehand/StagehandConfigManager');
+      const configManager = new StagehandConfigManager();
+      
+      // 🎯 创建Stagehand实例，支持运行时API降级（内部已完成init）
+      const stagehand = await configManager.createStagehandWithRuntimeFallback({
         localBrowserLaunchOptions: {
           cdpUrl: `http://127.0.0.1:${browserInfo.debugPort}`
         }
       });
       
-      // 🎯 关键：使用CDP URL连接到现有浏览器，绝不创建新实例
-      await stagehand.init();
-      
       console.log('✅ Stagehand实例已连接到AdsPower浏览器');
+      
+      // 存储当前调试端口供降级使用
+      (global as any).currentAdsPowerPort = browserInfo.debugPort;
+      console.log(`🔗 当前调试端口已存储: ${browserInfo.debugPort}`);
+      
+      // 重新应用运行时降级包装器，确保在page准备就绪后生效
+      if ((stagehand as any).applyRuntimeFallback) {
+        (stagehand as any).applyRuntimeFallback();
+        console.log('🔧 运行时降级包装器已重新应用');
+      }
       
       // 🎯 确保Stagehand在正确的问卷页面上操作
       const stagehandPage = stagehand.page;
